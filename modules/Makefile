@@ -57,7 +57,8 @@ ML_MODULES = \
     dev_tools/edmac \
     yolo \
     astro \
-    sd_uhs
+    sd_clock \
+    raw_video/raw_vidx
 
 .PHONY: clean $(BUILD_DIR)
 

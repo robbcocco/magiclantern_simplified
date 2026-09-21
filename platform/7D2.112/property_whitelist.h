@@ -36,9 +36,23 @@ const uint32_t prop_handler_deny[] =
 const uint32_t prop_write_allow[] =
 {
     PROP_ICU_AUTO_POWEROFF,
+    PROP_LV_ACTION, // needed to avoid mlv_lite getting into a bad state,
+                    // where trying to record two videos without exiting LV / entering ML menus
+                    // will trigger a hard lock on cam.  See issue 307
     PROP_BUTTON_ASSIGNMENT,
     PROP_REMOTE_SW1,
-    PROP_REMOTE_SW2
+    PROP_REMOTE_SW2,
+    PROP_PICTURE_STYLE,
+    PROP_PICSTYLE_SETTINGS_STANDARD,
+    PROP_PICSTYLE_SETTINGS_PORTRAIT,
+    PROP_PICSTYLE_SETTINGS_LANDSCAPE,
+    PROP_PICSTYLE_SETTINGS_NEUTRAL,
+    PROP_PICSTYLE_SETTINGS_FAITHFUL,
+    PROP_PICSTYLE_SETTINGS_MONOCHROME,
+    PROP_PICSTYLE_SETTINGS_USERDEF1,
+    PROP_PICSTYLE_SETTINGS_USERDEF2,
+    PROP_PICSTYLE_SETTINGS_USERDEF3,
+    PROP_PICSTYLE_SETTINGS_AUTO
 };
 
 // anything not listed above will allow reads but not writes

@@ -34,7 +34,7 @@ THUMB_FN(0xdf00d299,  bzero32)                /* zeros out a data structure */
 THUMB_FN(0xdf006515,  create_init_task)       /* low-level DryOS initialization */
 THUMB_FN(0xe0040225,  init_task)              /* USER_MEM size checking, dmSetup, termDriverInit, stdlibSetup etc */
 THUMB_FN(0xe06b07a4,  dcache_clean)           /* loop with MCR p15 c7,c10,1; DSB */
-THUMB_FN(0xe0013c60,  dcache_clean_multicore) /* loop writing to c11007b0, called after dcache_clean by copy_mmu_tables() */
+THUMB_FN(0xe00d9ccc,  dcache_clean_multicore) /* loop writing to c11007b0, called after dcache_clean by copy_mmu_tables() */
 THUMB_FN(0xe06b0878,  icache_invalidate)      /* loop with MCR p15 c7,c5,1; c7,c1,6; c7,c1,0; ISB */
 
 /** Tasks **/
@@ -70,15 +70,38 @@ THUMB_FN(0xdf006e6c,  DryosDebugMsg)          /* lots of debug messages; format 
 /** DMA **/
 THUMB_FN(0xe01e565e,  dma_memcpy)
 
+/** EDMAC **/
+// EDmac is distinct from XDMAC, they are different controllers.
+//
+// This is a trimmed set of stubs.  More are known on D7, see 200D.
+// This is the minimal required to support raw video, using mem_to_mem_edmac_copy()
+THUMB_FN(0xe04aa70c,  CreateResLockEntry) // via xrefs to a pointer to "ResInfo"
+THUMB_FN(0xe04aa7f0,  DeleteResLockEntry)
+THUMB_FN(0xe04aa8f4,  LockEngineResources)
+THUMB_FN(0xe04aa994,  UnLockEngineResources)
+THUMB_FN(0x30900, shamem_read) // nearly always inlined, so very few refs.
+                               // Can find via "[MEM1DEV] Addr=%#x Data=%#x"
+THUMB_FN(0xe01cd96c, create_mem_to_mem_lock_and_pwrmng_globals)
+THUMB_FN(0xe01cdb22, lock_and_wake_mem_to_mem)
+THUMB_FN(0xe01cdb46, unlock_and_sleep_mem_to_mem)
+THUMB_FN(0xe01cd9ae, delete_mem_to_mem_lock)
+THUMB_FN(0xe01cdac6, set_mem_to_mem_cbr)
+THUMB_FN(0xe01cda22, mem_to_mem_setup_copy)
+THUMB_FN(0xe01cdad8, mem_to_mem_set_src_dst_and_start)
+THUMB_FN(0xe01cdad0, set_default_mem_to_mem_cbr)
+
+// This does several things, including releasing / de-associating device 6.
+// Device 6 is strongly related to the Channel Switch.  Possibly it is the Channel Switch?
+// Possibly it's a device for doing mem 2 mem transfers, which uses Channel Switch.
+THUMB_FN(0xe01cdb02, cleanup_mem_to_mem)
+
 /** MMU **/
-THUMB_FN(0xe0004a5a, change_mmu_tables) // Updates TTBRs and does TLB maintenance
-THUMB_FN(0xe0013b58, copy_mmu_tables) // copies from one location to another,
+THUMB_FN(0xe04dcad2, change_mmu_tables) // Updates TTBRs and does TLB maintenance
+//THUMB_FN(0xe0013b58, copy_mmu_tables) // copies from one location to another,
                                       // fixing up addresses held in table start,
                                       // and doing cache maintenance
 // slightly MMU related, used by CONFIG_MMU_REMAP
-ARM32_FN(0xe00163e0, memcpy_dryos) // useful in early contexts when we don't have
-                                   // dietlibc or newlib, and can't use stdio memcpy64 because
-                                   // that wants ML assert handling initialised.
+THUMB_FN(0xe0788644, memcpy_dryos) // See 200D stubs for long comment on finding a good memcpy.
 THUMB_FN(   0x2d952, _request_RPC) // allows cross-CPU function calls.  See long comment in 200D stubs.S
 THUMB_FN(   0x2d972,  clear_RPC_request) // reset the request to prevent calling
                                          // the function forever
@@ -140,6 +163,9 @@ THUMB_FN(0xdf009338,  vsnprintf)              /* called near dmstart; references
 
 DATA_PTR(    0x100b4,  winsys_sem) // written to in InitializeScreen (see "Winsys_Wait_v"), used in RefreshVrmsSurface
 
+THUMB_FN(0xe048b0e8, _turn_off_display)
+THUMB_FN(0xe048b0d4, _turn_on_display)
+
 THUMB_FN(0xdf0031a3,  get_task_by_id) // called indirectly by task_create and functions using string "TASK Name"
 THUMB_FN(0xdf004041,  _get_task_info_by_id)
 NSTUB(    0x4f40,  dm_names) // in DebugMsg, before the 1st loop target
@@ -189,6 +215,7 @@ THUMB_FN(0xe03a1c00,  LiveViewApp_handler) // DebugMsg: "StartLiveViewApp(%#x)",
 THUMB_FN(0xe07bcd3c,  LiveViewShutterApp_handler) // DebugMsg: "StartLiveViewShutterApp", address passed to CreateDialogBox
 THUMB_FN(0xe0543916,  PlayMovieGuideApp_handler) // "StartPlayMovieGuideApp"
 THUMB_FN(0xe048703c,  PlayMain_handler) // "DlgPlayMain.c PRESS_ERASE_BUTTON" - code above the string, wasn't found automatically
+THUMB_FN(0xe07d0810,  ErrCardForLVApp_handler) // "DlgLiveViewError.c DELETE_DIALOG_REQUEST"
 THUMB_FN(0xe03d5b1e,  GetCFnData) // Differs significantly from 200D
 THUMB_FN(0xe03d4c80,  SetCFnData) // There are some "SetCFnData" related strings
 
@@ -248,6 +275,8 @@ THUMB_FN(0xdf0070c5,  dm_set_store_level) // called by "dmstore"
 THUMB_FN(0xdf00707d,  dm_set_print_level)
 THUMB_FN(0xdf00325d,  task_trampoline)
 
+THUMB_FN(0xe044726a, _get_fps_register_a)
+THUMB_FN(0xe04471de, _get_fps_register_b)
 
 //////
 // SJE stuff that's not required but can be useful

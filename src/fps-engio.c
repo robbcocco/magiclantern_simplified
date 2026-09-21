@@ -139,10 +139,10 @@ static void EngDrvOutFPS(uint32_t reg, uint32_t val)
 static int fps_reg_a_orig = 0;
 static int fps_reg_b_orig = 0;
 
-static int fps_timer_a;        // C0F06008
-static int fps_timer_a_orig;
-static int fps_timer_b;        // C0F06014
-static int fps_timer_b_orig;
+static int fps_timer_a = 0;        // C0F06008
+static int fps_timer_a_orig = 0;
+static int fps_timer_b = 0;        // C0F06014
+static int fps_timer_b_orig = 0;
 
 static int fps_values_x1000[] = {
     150, 200, 250, 333, 400, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000,
@@ -285,9 +285,42 @@ static void fps_read_current_timer_values();
 #elif defined(CONFIG_200D)
     #define TG_FREQ_BASE 84000000 // 84MHz from measurements of timer values, much higher than old cams
     #define FPS_TIMER_A_MIN (fps_timer_a_orig)
+    // values from logging (timer_a, timer_b):
+    // LV, photo mode:
+    // pal  : 490, 4e0 (or 4df, it flickers a little)
+    // NTSC : 490, 4e0
+    //
+    // LV, mov mode:
+    // All res seem to give the same timings, only fps changes things.
+    // Again, the b value flickers by 1 every so often
+    // 23.98: 461, 618 => 41.97 Mhz
+    // 25   : 461, 5d8 => 41.93 Mhz
+    // 29.97: 461, 4e0 => 41.97 Mhz
+    // 50   : 2e9, 2ec => 27.86 Mhz
+    // 59.94: 175, 270 => 13.97 Mhz
+    //
+    // Variable?  We're missing something on this cam.  Possibly a clock
+    // multiplier / divisor?
+
 #elif defined(CONFIG_6D2)
-    #define TG_FREQ_BASE 32000000 //copy from 700D
+    #define TG_FREQ_BASE 66800000
     #define FPS_TIMER_A_MIN (fps_timer_a_orig)
+    // values from logging (timer_a, timer_b):
+    // LV, photo mode:
+    // pal  : ,
+    // NTSC : ,
+    //
+    // LV, mov mode:
+    // All res seem to give the same timings, only fps changes things.
+    // Again, the b value flickers by 1 every so often
+    // 23.98: 588, 7b0 => 66.88 Mhz
+    // 25   : 588, 760 => 66.83 Mhz
+    // 29.97: 588, 626 => 66.86 Mhz
+    // 50   : 3ae, 3b0 => 44.46 Mhz
+    // 59.94: 1d8, 314 => 22.32 Mhz
+    //
+    // Variable, like 200D?  Different base clock though.
+
 #elif defined(CONFIG_DIGIC_VIII) || defined(CONFIG_DIGIC_X)
     #define TG_FREQ_BASE 32000000 //copy from 700D
     #define FPS_TIMER_A_MIN (fps_timer_a_orig)
@@ -313,6 +346,19 @@ static void fps_read_current_timer_values();
 #elif defined(CONFIG_70D)
     #define TG_FREQ_BASE 32000000
     #define FPS_TIMER_A_MIN (fps_timer_a_orig)
+    // values from logging (timer_a, timer_b):
+    // LV, photo mode:
+    // pal: 295, 649 => (30fps?) 31.9 Mhz
+    // NTSC: same
+    //
+    // LV, mov mode:
+    // All res seem to give the same timings, only fps changes things.
+    // Again, the b value flickers by 1 every so often
+    // 50   : 31f, 31f => 31.92 Mhz
+    // 59.94: 29f, 319 => 31.93 Mhz
+    // 29.97: 2bb, 5f4 => 31.96 Mhz
+    // 25   : 31f, 63f => 31.94 Mhz
+    // 23.98: 2bb, 772 => 31.98 Mhz
 #endif
 
 // these can change timer B with another method, more suitable for high FPS
@@ -384,6 +430,8 @@ static int calc_tg_freq(int timerA)
 static int calc_fps_x1000(int timerA, int timerB)
 {
     int f = calc_tg_freq(timerA);
+    if (timerB == 0)
+        timerB = 1;
     return f / timerB;
 }
 
@@ -394,9 +442,6 @@ int get_current_tg_freq()
     int f = calc_tg_freq(timerA);
     return f;
 }
-
-
-
 
 /** For FRAME_SHUTTER_TIMER, hex dump VIDEO_PARAMETERS_SRC_3 and look for a value that gets smaller
  *  when you select a faster shutter speed (in movie mode), and gets bigger when you select a slower
@@ -440,6 +485,8 @@ static int get_shutter_reciprocal_x1000(int shutter_r_x1000, int Ta, int Ta0, in
 int get_max_shutter_timer()
 {
     int default_fps = calc_fps_x1000(fps_timer_a_orig, fps_timer_b_orig);
+    if (default_fps == 0)
+        return 1;
     return SHUTTER_x1000_TO_TIMER(default_fps);
 }
 
@@ -969,6 +1016,8 @@ static void calc_rolling_shutter(int * line_ns, int * frame_us, int * frame_perc
     /* Multiply by raw vertical resolution => rolling shutter */
 
     int main_clock_div_timer_A = get_current_tg_freq();
+    if (main_clock_div_timer_A == 0)
+        return;
     float line_readout_time_us = 1.0e9f / main_clock_div_timer_A;
     if (line_ns) *line_ns = (int)roundf(line_readout_time_us * 1000.0f);
 
@@ -1468,7 +1517,7 @@ static void fps_criteria_change(void* priv, int delta)
 static MENU_UPDATE_FUNC(fps_wav_record_print)
 {
     MENU_SET_ENABLED(1);
-    MENU_SET_ICON(CURRENT_VALUE ? MNI_ON : MNI_DISABLE, 0);
+    MENU_SET_ICON(MENU_CURRENT_VALUE ? MNI_ON : MNI_DISABLE, 0);
 }
 
 static MENU_UPDATE_FUNC(fps_ramp_duration_update)

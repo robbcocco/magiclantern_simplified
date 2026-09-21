@@ -36,6 +36,7 @@ static CONFIG_INT( "dof.info.coc.apsc", dof_info_coc, 19);
 #endif
 
 static void trap_focus_toggle_from_af_dlg();
+extern int trap_focus;
 void lens_focus_enqueue_step(int dir);
 
 static int override_zoom_buttons; // while focus menu is active and rack focus items are selected
@@ -341,7 +342,7 @@ static MENU_UPDATE_FUNC(dof_info_update)
 
 static MENU_UPDATE_FUNC(dof_info_coc_update)
 {
-    MENU_SET_VALUE("%d " SYM_MICRO"m", CURRENT_VALUE);
+    MENU_SET_VALUE("%d " SYM_MICRO"m", MENU_CURRENT_VALUE);
 }
 
 static void wait_notify(int seconds, char* msg)
@@ -840,7 +841,7 @@ int get_focus_graph()
     if (should_draw_bottom_graphs())
         return zebra_should_run();
 
-    if (get_trap_focus() && can_lv_trap_focus_be_active())
+    if (trap_focus && can_lv_trap_focus_be_active())
         return (liveview_display_idle() && get_global_draw()) || get_halfshutter_pressed();
 
     return 0;
@@ -912,7 +913,7 @@ static int trap_focus_autoscaling = 1;
 #ifdef FEATURE_TRAP_FOCUS
 int handle_trap_focus(struct event * event)
 {
-    if (event->param == BGMT_PRESS_SET && get_trap_focus() && can_lv_trap_focus_be_active() && zebra_should_run())
+    if (event->param == BGMT_PRESS_SET && trap_focus && can_lv_trap_focus_be_active() && zebra_should_run())
     {
         trap_focus_autoscaling = !trap_focus_autoscaling;
         return 0;
@@ -1055,7 +1056,7 @@ TASK_CREATE( "focus_misc_task", focus_misc_task, 0, 0x1e, 0x1000 );
 #ifdef FEATURE_TRAP_FOCUS
 static MENU_UPDATE_FUNC(trap_focus_display)
 {
-    int t = CURRENT_VALUE;
+    int t = MENU_CURRENT_VALUE;
     if (!lv && !lens_info.lens_exists)
         MENU_SET_WARNING(MENU_WARN_NOT_WORKING, "Trap focus outside LiveView requires a chipped lens");
     if (t == 2 && cfn_get_af_button_assignment() != AF_BTN_HALFSHUTTER)
@@ -1063,10 +1064,6 @@ static MENU_UPDATE_FUNC(trap_focus_display)
     //~ if (lv && get_silent_pic())
         //~ MENU_SET_WARNING(MENU_WARN_NOT_WORKING, "Trap focus in LV not working with silent pictures.");
 }
-
-
-extern int trap_focus;
-//~ extern int trap_focus_shoot_numpics;
 
 static void trap_focus_toggle_from_af_dlg()
 {

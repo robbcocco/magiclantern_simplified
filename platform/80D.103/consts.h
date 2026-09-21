@@ -79,7 +79,7 @@
 
     #define HALFSHUTTER_PRESSED         0
 
-    #define NUM_PICSTYLES 10 // guess, but seems to be always 9 for old cams, 10 for new
+#define NUM_PICSTYLES 11 // Digic 6 with 11 picstyles / three sharpness sliders
 
   #define AUDIO_MONITORING_HEADPHONES_CONNECTED 0
 #define INFO_BTN_NAME               "INFO"
@@ -91,8 +91,9 @@
 
     /* WRONG: copied straight from 200d/50d */
     // Definitely wrong / hacks / no testing at all:
-    #define WINSYS_BMP_DIRTY_BIT_NEG MEM(0x4444+0x30) // wrong, no idea
-    #define FOCUS_CONFIRMATION (*(int*)0x4444) // wrong, focusinfo looks really different 50D -> 200D
+extern int winsys_bmp_dirty_bit_neg;
+#define WINSYS_BMP_DIRTY_BIT_NEG MEM(&winsys_bmp_dirty_bit_neg) // faked via function_overrides.c
+#define FOCUS_CONFIRMATION 0 // wrong, but safe, no focus lock
 
     #define LV_BOTTOM_BAR_DISPLAYED 0x0 // wrong, fake bool
     // this block all copied from 50D, and probably wrong, though likely safe

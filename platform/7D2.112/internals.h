@@ -12,19 +12,26 @@
 // Digic 6 does not have bitmap font in ROM, try to load it from card
 #define CONFIG_NO_BFNT
 
+// wanted to get raw_rec_vsync_cbr running via vsync_func,
+// for mlv_lite
+#define CONFIG_EVF_STATE_SYNC
+
 // This camera has LiveView and can record video
 #define CONFIG_LIVEVIEW
+
+// Does the mode *dial* have movie mode?
+#define CONFIG_NO_DEDICATED_MOVIE_MODE
 
 // enable state objects hooks
 #define CONFIG_STATE_OBJECT_HOOKS
 
 // SRM is untested, this define is to allowing building
 // without SRM_BUFFER_SIZE being found
-#define CONFIG_MEMORY_SRM_NOT_WORKING
+//#define CONFIG_MEMORY_SRM_NOT_WORKING
 
 // Cam has very few spare tasks for ML, steal more mem
 // during boot to raise the limit
-#define CONFIG_INCREASE_MAX_TASKS 4
+#define CONFIG_INCREASE_MAX_TASKS 7
 
 #define CONFIG_MALLOC_STRUCT_V2
 

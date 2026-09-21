@@ -97,7 +97,7 @@ jobs:
         run: mkdir -p doc/cam
 
       - name: Build for ${{ github.event.inputs.platform }}
-        run: make -C platform/${{ github.event.inputs.platform }} ${{ github.event.inputs.params }} ${{ github.event.inputs.config_qemu == 'true' && 'CONFIG_QEMU=y' || '' }} ${{ github.event.inputs.fatal_warnings == 'true' && 'CONFIG_FATAL_WARNINGS=y' || '' }}
+        run: make -C platform/${{ github.event.inputs.platform }} ${{ github.event.inputs.params }} ${{ github.event.inputs.config_qemu == 'true' && 'CONFIG_QEMU=y' || '' }} ${{ github.event.inputs.fatal_warnings == 'true' && '' || 'FATAL_WARNINGS=n' }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

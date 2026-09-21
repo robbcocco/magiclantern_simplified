@@ -98,6 +98,7 @@ static int cam_6d = 0;
 static int cam_600d = 0;
 static int cam_650d = 0;
 static int cam_7d = 0;
+static int cam_7d2 = 0;
 static int cam_70d = 0;
 static int cam_700d = 0;
 static int cam_60d = 0;
@@ -375,7 +376,7 @@ static GUARDED_BY(LiveViewTask) int frame_count = 0;                /* how many 
 static GUARDED_BY(LiveViewTask) int skipped_frames = 0;             /* how many frames we had to drop (only done during pre-recording) */
 static GUARDED_BY(RawRecTask)   int chunk_frame_count[MAX_WRITER_THREADS] = {0};          /* how many frames in the current file chunk */
 static volatile                 int buffer_full = 0;                /* true when the memory becomes full */
-       GUARDED_BY(RawRecTask)   char * raw_movie_filename = 0;      /* file name for current (or last) movie */
+       GUARDED_BY(RawRecTask)   char *raw_movie_filename = NULL;      /* file name for current (or last) movie */
 static GUARDED_BY(RawRecTask)   char chunk_filename[MAX_WRITER_THREADS][MAX_PATH];          /* file name for current movie chunk */
 static GUARDED_BY(RawRecTask)   int64_t written_total[MAX_WRITER_THREADS] = {0};          /* how many bytes we have written in this movie */
 static GUARDED_BY(RawRecTask)   int64_t written_chunk[MAX_WRITER_THREADS] = {0};          /* same for current chunk */
@@ -761,6 +762,12 @@ void update_resolution_params()
 
     /* res X */
     res_x = MIN(resolution_presets_x[resolution_index_x] + res_x_fine, max_res_x);
+    if (cam_7d2)
+    {
+        /* We don't know how to do EDMAC rect copies yet on this cam.
+         * We use a fast memcpy variant, but are limited to full width copies. */
+        res_x = max_res_x;
+    }
 
     /* res Y */
     int num = aspect_ratio_presets_num[aspect_ratio_index];
@@ -1167,6 +1174,11 @@ static MENU_UPDATE_FUNC(resolution_update)
     if (crop_factor) MENU_SET_RINFO("%s%d.%02dx", FMT_FIXEDPOINT2( crop_factor ));
 
     int selected_x = resolution_presets_x[resolution_index_x] + res_x_fine;
+    if (cam_7d2)
+    {
+        /* full width only on this cam */
+        selected_x = raw_info.pitch * 8 / BPP;
+    }
     
     if (selected_x > max_res_x)
     {
@@ -3508,7 +3520,7 @@ void raw_video_rec_task(uint32_t thread)
     int liveview_hacked = 0;
     int last_write_timestamp = 0;    /* last FIO_WriteFile call */        
     int last_processed_frame = 0;
-    static int fps;
+    int fps = 1;
 
     written_total[thread] = 0; /* in bytes */
     writing_time[thread] = 0;
@@ -3628,7 +3640,7 @@ void raw_video_rec_task(uint32_t thread)
             beep();
         }
 
-        int fps = fps_get_current_x1000();
+        fps = fps_get_current_x1000();
         if (fps == 0)
             goto cleanup;
 
@@ -3639,8 +3651,6 @@ void raw_video_rec_task(uint32_t thread)
         
         /* fake recording status, to integrate with other ml stuff (e.g. hdr video */
         set_recording_custom(CUSTOM_RECORDING_RAW);
-        
-        fps = fps_get_current_x1000();
 
         /* this will enable the vsync CBR and the other task(s) */
         raw_recording_state = pre_record ? RAW_PRE_RECORDING : RAW_RECORDING;
@@ -3676,7 +3686,8 @@ void raw_video_rec_task(uint32_t thread)
         
         if (use_h264_proxy())
         {
-            if (get_shooting_card()->drive_letter[0] == raw_movie_filename[0])
+            if (raw_movie_filename != NULL
+                && get_shooting_card()->drive_letter[0] == raw_movie_filename[0])
             {
                 /* both H.264 and RAW on the same card? */
                 /* throttle the raw recording task to make sure H.264 is not starving */
@@ -4066,10 +4077,10 @@ abort_and_check_early_stop:
 
 cleanup:
     if (f) finish_chunk(f, thread);
-    if (!written_total[thread])
+    if (!written_total[thread] && raw_movie_filename != NULL)
     {
         FIO_RemoveFile(raw_movie_filename);
-        raw_movie_filename[0] = 0;
+        raw_movie_filename[0] = '\0';
     }
     
     if (thread == 0) /* Only do this part of cleanup on main thread */
@@ -4148,7 +4159,7 @@ static MENU_SELECT_FUNC(raw_playback_start)
 {
     if (RAW_IS_IDLE)
     {
-        if (!raw_movie_filename[0])
+        if (raw_movie_filename == NULL || raw_movie_filename[0] == '\0')
         {
             bmp_printf(FONT_MED, 20, 50, "Please record a movie first.");
             return;
@@ -4162,7 +4173,7 @@ static MENU_UPDATE_FUNC(raw_playback_update)
     if ((thunk)mlv_play_file == (thunk)ret_0)
         MENU_SET_WARNING(MENU_WARN_NOT_WORKING, "You need to load the mlv_play module.");
     
-    if (raw_movie_filename[0])
+    if (raw_movie_filename != NULL && raw_movie_filename[0])
         MENU_SET_VALUE(raw_movie_filename + 17);
     else
         MENU_SET_WARNING(MENU_WARN_NOT_WORKING, "Record a video clip first.");
@@ -4822,6 +4833,7 @@ static unsigned int raw_rec_init()
     cam_600d  = is_camera("600D", "1.0.2");
     cam_650d  = is_camera("650D", "1.0.4");
     cam_7d    = is_camera("7D",   "2.0.3");
+    cam_7d2   = is_camera("7D2",  "1.1.2");
     cam_70d   = is_camera("70D",  "1.1.2");
     cam_700d  = is_camera("700D", "1.1.5");
     cam_60d   = is_camera("60D",  "1.1.1");
@@ -4834,7 +4846,7 @@ static unsigned int raw_rec_init()
     cam_5d3 = (cam_5d3_113 || cam_5d3_123);
     
     /* Both SD and CF cards should be presented in camera */
-    if (is_dir("A:/") && is_dir("B:/")) cam_dualcard = cam_5d3; /* Add any new models later */
+    if (is_dir("A:/") && is_dir("B:/")) cam_dualcard = (cam_5d3 || cam_7d2); /* Add any new models later */
     
     if (cam_5d2 || cam_50d)
     {
@@ -4861,6 +4873,23 @@ static unsigned int raw_rec_init()
     if (more_hacks_are_supported && !CartridgeCancel_works)
     {
         raw_video_menu[0].children[13].max = 2;
+    }
+
+    /* gate features by DIGIC version (needed for 7D2 / Digic6) */
+    int digic_version = get_digic_version();
+    for (struct menu_entry * e = raw_video_menu[0].children; !MENU_IS_EOL(e); e++)
+    {
+        if (digic_version > 5 && streq(e->name, "Small hacks"))
+        {
+            e->shidden = 1;
+            small_hacks = 0;
+        }
+        if (digic_version != 5 && streq(e->name, "Data format") && e->max > 2)
+        {
+            /* only Digic 5 has working lossless compression so far */
+            e->max = 2;
+            output_format = 0;
+        }
     }
 
     menu_add("Movie", raw_video_menu, COUNT(raw_video_menu));

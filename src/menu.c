@@ -959,7 +959,7 @@ static void entry_draw_icon(
             break;
         }
         case IT_PERCENT:
-            //~ if (entry->min < 0) menu_draw_icon(x, y, MNI_PERCENT_PM, (CURRENT_VALUE & 0xFF) | ((entry->min & 0xFF) << 8) | ((entry->max & 0xFF) << 16), warn);
+            //~ if (entry->min < 0) menu_draw_icon(x, y, MNI_PERCENT_PM, (MENU_CURRENT_VALUE & 0xFF) | ((entry->min & 0xFF) << 8) | ((entry->max & 0xFF) << 16), warn);
             menu_draw_icon(x, y, MNI_PERCENT, SELECTED_INDEX(entry) * 100 / (NUM_CHOICES(entry)-1), warn);
             break;
 
@@ -2960,8 +2960,10 @@ skip_name:
             print_help_line(help_color, 10, MENU_HELP_Y_POS, help1);
         }
 
-        char* help2 = 0;
-        if (help1 != info->help)
+        char* help2 = NULL;
+        if (info->help != NULL
+            && info->help[0] != '\0'
+            && help1 != info->help)
         {
             /* help1 already used for something else?
              * put overriden help (via MENU_SET_HELP) here */
@@ -4498,6 +4500,7 @@ void menu_entry_select(
             }
             else if (entry->edit_mode & EM_SHOW_LIVEVIEW)
             {
+                
                 if (lv) menu_lv_transparent_mode = !menu_lv_transparent_mode;
                 else edit_mode = !edit_mode;
             }
@@ -4766,7 +4769,10 @@ menu_redraw_do()
         if (menu_lv_transparent_mode)
         {
             bmp_fill( 0, 0, 0, 720, 480 );
-            
+            #ifdef FEATURE_VRAM_RGBA
+            clrscr();
+            #endif
+
             /*
             if (z)
             {
@@ -5019,22 +5025,26 @@ static struct menu * get_selected_toplevel_menu()
 }
 
 // argument is optional; 0 = top-level menus; otherwise, any menu can be used
-static struct menu_entry * get_selected_menu_entry(struct menu * menu)
+static struct menu_entry *get_selected_menu_entry(struct menu *menu)
 {
-    if (!menu)
+    if (menu == NULL)
     {
         /* find the currently selected top-level menu */
         menu = menus;
-        for( ; menu ; menu = menu->next )
-            if( menu->selected )
+        for (; menu != NULL; menu = menu->next)
+            if (menu->selected)
                 break;
     }
-    for (struct menu_entry * entry = menu->children; entry; entry = entry->next)
+
+    if (menu == NULL)
+        return NULL;
+
+    for (struct menu_entry *entry = menu->children; entry != NULL; entry = entry->next)
     {
-        if( entry->selected )
+        if (entry->selected)
             return entry;
     }
-    return 0;
+    return NULL;
 }
 
 static struct menu * get_current_submenu()
@@ -5890,12 +5900,15 @@ int is_menu_entry_selected(char* menu_name, char* entry_name)
     return 0;
 }
 
-int is_menu_selected(char* name)
+int is_menu_selected(char *name)
 {
-    struct menu * menu = menus;
-    for( ; menu ; menu = menu->next )
-        if( menu->selected )
+    struct menu *menu = menus;
+    for (; menu != NULL; menu = menu->next)
+        if (menu->selected)
             break;
+    if (menu == NULL)
+        return -1;
+
     return streq(menu->name, name);
 }
 
@@ -6820,7 +6833,7 @@ int menu_get_value_from_script(const char* name, const char* entry_name)
         return INT_MIN;
     }
     
-    return CURRENT_VALUE;
+    return MENU_CURRENT_VALUE;
 }
 
 /* not thread-safe */
@@ -6925,21 +6938,21 @@ int menu_set_str_value_from_script(const char* name, const char* entry_name, cha
         }
 
         /* optional argument to allow numeric match? */
-        if (value_int != INT_MIN && IS_ML_PTR(entry->priv) && CURRENT_VALUE == value_int)
+        if (value_int != INT_MIN && IS_ML_PTR(entry->priv) && MENU_CURRENT_VALUE == value_int)
         {
             printf("menu.set('%s', '%s'): matched integer (%d, %s)\n", entry_name, value, value_int, current);
             goto ok; // also success!
         }
 
         /* boolean match with "ON" ? */
-        if (streq(value, "ON") && IS_ML_PTR(entry->priv) && CURRENT_VALUE != 0)
+        if (streq(value, "ON") && IS_ML_PTR(entry->priv) && MENU_CURRENT_VALUE != 0)
         {
             printf("menu.set('%s', '%s'): matched boolean ('%s')\n", entry_name, value, current);
             goto ok; // also success!
         }
 
         /* boolean match with "OFF" ? */
-        if (streq(value, "OFF") && IS_ML_PTR(entry->priv) && CURRENT_VALUE == 0)
+        if (streq(value, "OFF") && IS_ML_PTR(entry->priv) && MENU_CURRENT_VALUE == 0)
         {
             printf("menu.set('%s', '%s'): matched boolean ('%s')\n", entry_name, value, current);
             goto ok; // also success!

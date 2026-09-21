@@ -23,6 +23,10 @@
 #define FEATURE_GLOBAL_DRAW
 #define FEATURE_CROPMARKS
 
+// Enable remapping ROM pages to RAM
+#define CONFIG_SGI_HANDLERS
+#define CONFIG_MMU_REMAP
+
 //~kitor: add bootdisk menu for easier testing on foreign camera :)
 #define FEATURE_BOOTFLAG_MENU
 
@@ -30,6 +34,7 @@
 // I think?  If it fails to AF lock, for example.
 #define CONFIG_IMAGE_CAPTURE_NOT_WORKING
 
-#undef CONFIG_CRASH_LOG
+#define CONFIG_CRASH_LOG
+#define CONFIG_AUTOBACKUP_ROM
+
 #undef CONFIG_PROP_REQUEST_CHANGE
-#undef CONFIG_AUTOBACKUP_ROM

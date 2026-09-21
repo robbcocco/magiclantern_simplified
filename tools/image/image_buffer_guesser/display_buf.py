@@ -40,7 +40,7 @@ def main():
              "desc": "16bpp YUV",
              "bgr_func": functools.partial(bgr_from_yuv, buf_8)},
             {"top_4": best_bayer[:4],
-             "desc": "42bpp Bayer",
+             "desc": "14bpp Bayer",
              "bgr_func": functools.partial(bgr_from_bayer, buf_16)},
             ]
 
@@ -48,6 +48,9 @@ def main():
         print("Top 4 guesses for %s, w*h: %s" % (b["desc"], b["top_4"]))
 
     bufs = [b for b in bufs if b["top_4"]]
+    if not bufs:
+        print("No guesses, giving up")
+        exit(0)
 
     # Allow user to select between decodings and w*h guesses
     # with wasd
@@ -68,22 +71,26 @@ def main():
         cv2.imshow("frame", bgr)
 
         # wasd keys control what is displayed,
-        # anything else exits
+        # anything else exits.  WS change image type,
+        # AD change guess within type.
         key = chr(cv2.waitKey(0) & 0xff)
         if key not in ['w', 'a', 's', 'd']:
             exit(0)
         else:
+            # change image type
             if key == 'w':
                 buf_i += 1
+                dims_i = 0
                 if buf_i == len(bufs):
                     buf_i = 0
             elif key == 's':
                 buf_i -= 1
+                dims_i = 0
                 if buf_i < 0:
                     buf_i = len(bufs) - 1
             elif key == 'd':
                 dims_i += 1
-                if dims_i == len(b["top_4"]) - 1:
+                if dims_i == len(b["top_4"]):
                     dims_i = 0
             elif key == 'a':
                 dims_i -= 1

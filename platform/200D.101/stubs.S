@@ -34,7 +34,7 @@ THUMB_FN(0xDF00D299,  bzero32)                /* zeros out a data structure */
 THUMB_FN(0xDF006515,  create_init_task)       /* low-level DryOS initialization */
 THUMB_FN(0xE0040225,  init_task)              /* USER_MEM size checking, dmSetup, termDriverInit, stdlibSetup etc */
 THUMB_FN(0xE06BE169,  dcache_clean)           /* loop with MCR p15 c7,c10,1; DSB */
-THUMB_FN(0xe0013dcc,  dcache_clean_multicore) /* loop writing to c11007b0, called after dcache_clean by copy_mmu_tables() */
+THUMB_FN(0xe00c43e4,  dcache_clean_multicore) /* loop writing to c11007b0, called after dcache_clean by copy_mmu_tables() */
 THUMB_FN(0xE06BE23D,  icache_invalidate)      /* loop with MCR p15 c7,c5,1; c7,c1,6; c7,c1,0; ISB */
 
 /** Tasks **/
@@ -88,6 +88,7 @@ THUMB_FN(0xe04b3920,  LockEngineResources)
 // Wrong, left for reference:
 //THUMB_FN(0xe04b3b59,  LockEngineResources) // Down a bit from CreateResLockEntry, start v similar but end is different.
 THUMB_FN(0xe04b39c0,  UnLockEngineResources)
+THUMB_FN(0x37b36, get_shamem_base_addr)
 THUMB_FN(0x37b08, shamem_read) // nearly always inlined on 200D, so very few refs.  Can find via
                                // "[MEM1DEV] Addr=%#x Data=%#x", haven't checked if this is reliable on other D7
 THUMB_FN(0xe00c0484,  mem_to_mem_edmac_copy)
@@ -112,9 +113,10 @@ THUMB_FN(0xe032a8c8, get_sensor_accumh) // old name: FPS_REGISTER_A
 //THUMB_FN(0x36904, edmac_related_16_register_irq_something)
 
 /** Engio **/
-//NSTUB(0x37aa4, __EngDrvOut) // func sig has changed, it's now void func(void *, void *, int val)
-                            // Looks like 1st arg is caller chosen storage, 2nd arg is MMIO addr.
-                            // Func stores val to both addresses, *and* shamem.
+//NSTUB(0x37aa4, __EngDrvOut) // This is not EngDrvOut(), but a separate variant.  This one is:
+                              // void func(void *, void *, int val)
+                              // Looks like 1st arg is caller chosen storage, 2nd arg is MMIO addr.
+                              // Func stores val to both of those addresses, and shadow mem.
 //NSTUB(0xe06323e0, __engio_write) // Needs more verifying.  If this is correct, it no longer
                            // writes to shamem, which might be annoying.
 
@@ -272,6 +274,7 @@ THUMB_FN(0xdf00b1d9,  msg_queue_receive) // "SystemIF::KerQueue.c" useful for fi
 // Second guess for msg_queue_post, I think this is right, if you look
 // at the function it calls, the checks inside that are a closer match.
 THUMB_FN(0xdf00b337,  msg_queue_post)
+//THUMB_FN(0xdf00b2b4,  msg_queue_post_with_timeout)
 
 THUMB_FN(0xdf00b36d,  msg_queue_count) // Fairly hard to find.  Often used near DispLockStop, which is easy to find
                                        // and not used often.
@@ -382,15 +385,21 @@ THUMB_FN(0xe021ded9, WinSys_AllocateMemory)
 THUMB_FN(0xe021df7d, WinSys_FreeMemory)
 
 // MMU related, required by CONFIG_MMU features
-THUMB_FN(0xe0004a5a, change_mmu_tables) // Updates TTBRs and does TLB maintenance
-THUMB_FN(0xe0013cc4, copy_mmu_tables) // copies from one location to another,
+THUMB_FN(0xe04b4372, change_mmu_tables) // Updates TTBRs and does TLB maintenance
+//THUMB_FN(0xe0013cc4, copy_mmu_tables) // copies from one location to another,
                                       // fixing up addresses held in table start,
                                       // and doing cache maintenance
-// slightly MMU related, used by CONFIG_MMU_REMAP
-ARM32_FN(0xe001654c, memcpy_dryos) // useful in early contexts when we don't have
-                                   // dietlibc or newlib, and can't use stdio memcpy64 because
-                                   // that wants ML assert handling initialised.
-THUMB_FN(0xe00138c2,  early_printf) // printf compatible with bootloader context
+
+// Used by CONFIG_MMU_REMAP:
+//
+// A memcpy.  There are many to choose from.  We want one that works in an early context.
+// The ideal memcpy for this purpose should:
+// - be in ROM, not RAM, so we can use it before the ROM -> RAM copies in early setup.
+// - should be later than MAIN_FIRMWARE_ADDR so that it is covered by our integrity checksum,
+//   and doesn't move if the bootloader is updated independently from main fw.
+// - should not depend on e.g. library code that needs to be setup by early DryOS code.
+THUMB_FN(0xe06afe64, memcpy_dryos)
+//THUMB_FN(0xe00138c2,  early_printf) // printf compatible with bootloader context
 
 
 DATA_PTR(   0xfd84,  bmp_vram_info) // function e04a044c looks relevant, see refs to 0x3c0 and 0x21c; 960x540

@@ -127,14 +127,14 @@
 // And do fix them!
 ////////////////
 
-#define NUM_PICSTYLES 10 // guess, but seems to be always 9 for old cams, 10 for new
+#define NUM_PICSTYLES 11
 
 #define MIN_MSLEEP 11
 
 // Definitely wrong / hacks / no testing at all:
 extern int winsys_bmp_dirty_bit_neg;
 #define WINSYS_BMP_DIRTY_BIT_NEG MEM(&winsys_bmp_dirty_bit_neg) // faked via function_overrides.c
-#define FOCUS_CONFIRMATION (*(int*)0x4444) // wrong, focusinfo looks really different 50D -> 200D
+#define FOCUS_CONFIRMATION 0 // wrong, but safe, no focus lock
 
 #define DISP_VRAM_STRUCT_PTR ((unsigned int *)(*(int *)0xaff0)) // used many DISP related places, "CurrentImgAddr : %#08x"
                                                                 // is a good string as this gets us the pointers to current buffers.

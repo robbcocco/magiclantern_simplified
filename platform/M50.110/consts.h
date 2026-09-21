@@ -20,6 +20,13 @@
 // align up.  This may not be exactly enough.  See boot-d678.c for longer explanation.
 #define FIRMWARE_ENTRY_LEN 0x220
 
+#define CANON_ORIG_MMU_TABLE_ADDR 0xe0000000 // Yes, this is the rom start, yes, there is code there.
+                                             // I assume ARM MMU alignment magic means this is okay,
+                                             // presumably the tables themselves don't use the early part.
+                                             // I don't have an exact ref in ARM manual.
+
+#define DRYOS_SGI_HANDLERS_PTR 0x402c
+
 /* "Malloc Information" */
 #define MALLOC_STRUCT_ADDR 0x56a1c
 //#define MALLOC_FREE_MEMORY (MEM(MALLOC_STRUCT + 8) - MEM(MALLOC_STRUCT + 0x1C)) // "Total Size" - "Allocated Size"
@@ -124,7 +131,7 @@
 //#define BFNT_BITMAP_OFFSET          0x00000000
 //#define BFNT_BITMAP_DATA            0x00000000
 
-#define NUM_PICSTYLES 10 // guess, but seems to be always 9 for old cams, 10 for new
+#define NUM_PICSTYLES 11
 
 #define AUDIO_MONITORING_HEADPHONES_CONNECTED 0
 #define INFO_BTN_NAME               "INFO"
@@ -138,8 +145,9 @@
 // Definitely wrong / hacks / no testing at all:
     #define IMGPLAY_ZOOM_LEVEL_ADDR (0x2CBC) //wrong
 
-    #define WINSYS_BMP_DIRTY_BIT_NEG MEM(0x4444+0x30) // wrong, no idea
-    #define FOCUS_CONFIRMATION (*(int*)0x4444) // wrong, focusinfo looks really different 50D -> 200D
+extern int winsys_bmp_dirty_bit_neg;
+#define WINSYS_BMP_DIRTY_BIT_NEG MEM(&winsys_bmp_dirty_bit_neg) // faked via function_overrides.c
+#define FOCUS_CONFIRMATION 0 // wrong, but safe, no focus lock
     #define LV_BOTTOM_BAR_DISPLAYED 0x0 // wrong, fake bool
 // this block all copied from 50D, and probably wrong, though likely safe
     #define FASTEST_SHUTTER_SPEED_RAW 160

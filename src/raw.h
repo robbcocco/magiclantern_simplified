@@ -66,6 +66,8 @@ Which better explains the layout of the following raw_pixblock struct.
 #ifndef _raw_h_
 #define _raw_h_
 
+#include "compiler.h" // for SIZE_CHECK_STRUCT
+
 /* group 8 pixels in 14 bytes to simplify decoding */
 struct raw_pixblock
 {
@@ -214,6 +216,7 @@ struct raw_info {
     int32_t color_matrix1[18];      // DNG Color Matrix
     int32_t dynamic_range;          // EV x100, from analyzing black level and noise (very close to DxO)
 };
+SIZE_CHECK_STRUCT(raw_info, 0xa0);
 
 /* raw image info "raw_info_t" used for file IO on host pc tools */
 #if INTPTR_MAX != INT32_MAX

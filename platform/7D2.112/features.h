@@ -1,13 +1,11 @@
 #define FEATURE_VRAM_RGBA
 
-//#define CONFIG_HELLO_WORLD
-
 // Don't Click Me menu looks to be intended as a place
 // for devs to put custom code in debug.c run_test(),
 // and allowing triggering from a menu context.
 #define FEATURE_DONT_CLICK_ME
 
-//#define FEATURE_SHOW_SHUTTER_COUNT
+#define FEATURE_SHOW_SHUTTER_COUNT
 
 // working but incomplete, some allocators don't report
 // anything yet as they're faked / not yet found
@@ -21,17 +19,26 @@
 //#define FEATURE_SHOW_GUI_EVENTS
 
 // enable global draw
-//#define FEATURE_GLOBAL_DRAW
-//#define FEATURE_CROPMARKS
+#define FEATURE_GLOBAL_DRAW
+#define FEATURE_CROPMARKS
 
 #define CONFIG_PROP_REQUEST_CHANGE
-//#define CONFIG_STATE_OBJECT_HOOKS
-//#define CONFIG_LIVEVIEW
-//#define FEATURE_POWERSAVE_LIVEVIEW
+#define CONFIG_STATE_OBJECT_HOOKS
+#define CONFIG_LIVEVIEW
+#define FEATURE_POWERSAVE_LIVEVIEW
 
-//#define CONFIG_IMAGE_CAPTURE_NOT_WORKING
+// needed for mlv_lite
+#define FEATURE_PICSTYLE
+#define CONFIG_RAW_LIVEVIEW
+
 #define FEATURE_INTERVALOMETER
 
+#define CONFIG_CRASH_LOG
+#define FEATURE_DISK_LOG
+
+#define FEATURE_PICSTYLE
+
+#define CONFIG_AUTOBACKUP_ROM
+
 // explicitly disable stuff that don't work or may break things
-#undef CONFIG_AUTOBACKUP_ROM
 #undef CONFIG_ADDITIONAL_VERSION

@@ -92,6 +92,7 @@ ML_CAMS = \
     80D.103 \
     850D.100 \
     EOSM.202 \
+    M6II.111 \
     M50.110 \
     R.180 \
     R5.152 \
@@ -378,9 +379,9 @@ ML_SRC_OBJS_00 = \
     raw.o \
     chdk-dng.o \
     edmac-memcpy.o \
-    sd.o \
     cache_hacks.o \
     patch.o \
+    picstyle.o \
     cache.o
 ML_SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(ML_SRC_OBJS_00))
 
@@ -400,13 +401,6 @@ else
     endif
     ML_SRC_OBJS += $(BUILD_DIR)/$(ML_INIT_OBJ)
 endif
-
-ifeq ($(ML_PICSTYLE_AUTO), n)
-    ML_PICSTYLE_OBJ = picstyle-noauto.o
-else
-    ML_PICSTYLE_OBJ = picstyle.o
-endif
-ML_SRC_OBJS += $(BUILD_DIR)/$(ML_PICSTYLE_OBJ)
 
 ifeq ($(ML_BITRATE_OBJ), n)
     ML_BITRATE_OBJ =

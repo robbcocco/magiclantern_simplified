@@ -80,7 +80,7 @@
 // I can't see why two functions is the best way of doing it (or, one for each core??)
 // The closest 50D match I could find has the same PAL / NTSC / HDMI style strings.
 //#define LV_STRUCT_PTR 0xaf2d0
-#define NUM_PICSTYLES 10 // guess, but seems to be always 9 for old cams, 10 for new
+#define NUM_PICSTYLES 11
 
 //Replaced by CONFIG_NO_BFNT in internals.h
 //#define BFNT_CHAR_CODES             0x00000000
@@ -104,9 +104,9 @@
 #define GUIMODE_PICQ 6
 
 // Definitely wrong / hacks / no testing at all:
-#define WINSYS_BMP_DIRTY_BIT_NEG MEM(0x56500000+0x30) // wrong, no idea (this address may be written to,
-                                                      // value is chosen because it's probably safe on 200D
-#define FOCUS_CONFIRMATION (*(int*)0x4444) // wrong, focusinfo looks really different 50D -> 200D
+extern int winsys_bmp_dirty_bit_neg;
+#define WINSYS_BMP_DIRTY_BIT_NEG MEM(&winsys_bmp_dirty_bit_neg) // faked via function_overrides.c
+#define FOCUS_CONFIRMATION 0 // wrong, but safe, no focus lock
 
 #define DISP_VRAM_STRUCT_PTR ((unsigned int *)(*(int *)0x7b64)) // used many DISP related places, "CurrentImgAddr : %#08x"
                                                                 // is a good string as this gets us the pointers to current buffers.

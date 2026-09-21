@@ -63,7 +63,7 @@
 // See e035735e and e0357e1e, which both call a function returning this value.
 // Not sure on this one, not really tested.
 //#define LV_STRUCT_PTR 0xad2c8
-#define NUM_PICSTYLES 10 // guess, but seems to be always 9 for old cams, 10 for new
+#define NUM_PICSTYLES 11
 
 //Replaced by CONFIG_NO_BFNT in internals.h
 //#define BFNT_CHAR_CODES             0x00000000
@@ -87,9 +87,9 @@
 #define GUIMODE_PICQ 6
 
 // Definitely wrong / hacks / no testing at all:
-#define WINSYS_BMP_DIRTY_BIT_NEG MEM(0x56500000+0x30) // wrong, no idea (this address may be written to,
-                                                      // value is chosen because it's probably safe on 200D
-#define FOCUS_CONFIRMATION (*(int*)0x4444) // wrong, focusinfo looks really different 50D -> 200D
+extern int winsys_bmp_dirty_bit_neg;
+#define WINSYS_BMP_DIRTY_BIT_NEG MEM(&winsys_bmp_dirty_bit_neg) // faked via function_overrides.c
+#define FOCUS_CONFIRMATION 0 // wrong, but safe, no focus lock
 #define YUV422_LV_BUFFER_DISPLAY_ADDR 0x0 // it expects this to be pointer to address
 #define YUV422_HD_BUFFER_DMA_ADDR 0x0 // it expects this to be shamem_read(some_DMA_ADDR)
 #define YUV422_LV_BUFFER_1 0x7f3e9600 // these three from srmGetShootMemAreaAddress()
@@ -98,6 +98,12 @@
 #define YUV422_LV_PITCH 1440
 #define LV_BOTTOM_BAR_DISPLAYED 0x0 // wrong, fake bool
 
+#define SRM_BUFFER_SIZE 0x2d20000 // print it from srm_malloc_cbr, use _srm_malloc(0x1000000) in run_test() to trigger
+#define SRM_MAX_BUF_COUNT_VIDEO_MODE 1 // 4 is okay in LV but not video, it will "NG AllocMem1"
+#define RAW_LV_EDMAC_CHANNEL_ADDR 0xd0058000 // channel 24 (index 23), via "Mem1 is Not Complete",
+                                             // it calls a function that passes hard-coded 23.
+                                             // FIXME this only works because we don't use raw_lv_edmac yet.
+#define SHAD_GAIN_REGISTER 0xd0008030 // plausible looking from ROM code, though untested
 
 // below definitely wrong, just copied from 50D
 //
@@ -124,6 +130,8 @@
 #define MVR_FRAME_NUMBER (*(int*)(220 + MVR_190_STRUCT))
 //#define MVR_LAST_FRAME_SIZE (*(int*)(512 + MVR_752_STRUCT))
 #define MVR_BYTES_WRITTEN MEM((212 + MVR_190_STRUCT))
+#define MVR_TIME_LIMIT_NORMAL_FPS 0xe042ff74 // can find via time limit literals, 1799000 (29m59s)
+#define MVR_TIME_LIMIT_HIGH_FPS 0xe042ff78   // and 449000 (7m29s)
 
 
 // SJE new stuff added after we have ML menus working!

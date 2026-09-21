@@ -479,6 +479,15 @@ static int get_default_white_level()
      -797, 10000,    2424, 10000,   7010, 10000
 #endif
 
+#ifdef CONFIG_M6II // from https://github.com/LibRaw/LibRaw src/tables/colordata.cpp
+    // 	{ LIBRAW_CAMERAMAKER_Canon, "EOS M6 Mark II", 0, 0,
+    //    { 11498,-3759,-1516,-5073,12954,2349,-892,1867,6118 } }, },
+    #define CAM_COLORMATRIX1 \
+    11498, 10000,   -3759, 10000,  -1516, 10000, \
+    -5073, 10000,   12954, 10000,   2349, 10000, \
+     -892, 10000,    1867, 10000,   6118, 10000
+#endif
+
 #ifdef CONFIG_SX740
     // copy from EOS R, as there's no data available now
     #define CAM_COLORMATRIX1 \
@@ -595,8 +604,7 @@ static int dynamic_ranges[] = {1196, 1170, 1139, 1087, 1019, 938, 848, 756, 664}
 #endif
 
 #if defined(CONFIG_80D)
-//same sensor
-static int dynamic_ranges[] = {1317, 1264, 1176, 1092, 1005, 921, 840, 731, 644};
+static int dynamic_ranges[] = {1233, 1180, 1093, 1008, 921, 837, 756, 648, 560};
 #endif
 
 #ifdef CONFIG_850D
@@ -621,15 +629,21 @@ static int dynamic_ranges[] = {1255, 1237, 1188, 1120, 1045, 964, 883, 785, 685,
 static int dynamic_ranges[] = {1105, 1086, 1065, 1038, 1000, 936, 846, 773, 676, 585, 499};
 #endif
 
-// TODO: DxO graph is corrupted, so leaving R values for now
 #ifdef CONFIG_R5
-static int dynamic_ranges[] = {1255, 1237, 1188, 1120, 1045, 964, 883, 785, 685, 599, 507};
+static int dynamic_ranges[] = {1333, 1218, 1255, 1127, 1038, 939, 845, 747, 643, 552, 452};
 #endif
 
 /** M50 data missing from DxO.
  *  For now I just copied R
  */
 #ifdef CONFIG_M50
+static int dynamic_ranges[] = {1255, 1237, 1188, 1120, 1045, 964, 883, 785, 685, 599};
+#endif
+
+/** M6 Mark II data missing from DxO.
+ *  For now I just copied R
+ */
+#ifdef CONFIG_M6II
 static int dynamic_ranges[] = {1255, 1237, 1188, 1120, 1045, 964, 883, 785, 685, 599};
 #endif
 
@@ -914,7 +928,7 @@ int raw_update_params_work()
     int mv640crop = mv && video_mode_resolution == 2 && video_mode_crop;
     int zoom = lv_dispsize > 1;
 
-    // FIXME SJE wtf is this terrible hack.  How about we fix the code instead of hiding errors?
+    // FIXME SJE what is this terrible hack?  Presumably much better to fix the code instead of hiding errors?
     /* silence warnings; not all cameras have all these modes */
     (void)mv640; (void)mv720; (void)mv1080; (void)mv1080crop; (void)mv640crop; (void)zoom;
 
@@ -1062,7 +1076,7 @@ int raw_update_params_work()
         // Being in the black region should work, exact alignment may need correcting
         // for actual raw capture.
         skip_top    = 20;
-        skip_left   = 144;
+        skip_left   = 0; // we can't crop properly yet, so this must be 0
         #endif
 
         #ifdef CONFIG_200D
@@ -2481,7 +2495,8 @@ static void raw_lv_enable()
 
 #ifndef CONFIG_EDMAC_RAW_SLURP
 #ifdef CONFIG_DIGIC_VIII
-    // sets output to RAW, default is YUV
+    // On D8, lv_save_raw saves as YUV by default.
+    // lv_set_mm configs this, here we select RAW.
     call("lv_set_mm", 1);
     // This is not needed (for now?) seems to set where in processing path the data is sourced.
     // Defaults to 0, SAP::HEAD
@@ -2633,16 +2648,37 @@ void raw_lv_request_bpp(int bpp)
     /* raw bit depth setup is done from PACK32_MODE register (mask 0x131) */
     #if defined(CONFIG_DIGIC_45)
         const uint32_t PACK32_MODE = 0xC0F08094;
-    #elif defined(CONFIG_200D)
+        enum {
+            // SJE I don't see these values getting written on 70D.
+            // Concrete values used are 0x20 and 0x120.  There's a variable value one that I haven't traced.
+            // Similar on 5D3 123, where I see 0x120 and (variable | 0x20).
+            // Possibly this is "highest bit wins" and 0x30 is redundant, equal to 0x20?
+            MODE_16BIT = 0x130,
+            MODE_14BIT = 0x030,
+            MODE_12BIT = 0x010,
+            MODE_10BIT = 0x000,
+        };
+    #elif defined(CONFIG_200D) | defined(CONFIG_6D2) | defined(CONFIG_7D2)
+    // FIXME currently doesn't do anything for 6D2 or 7D2 since
+    // EngDrvOut() is a nop there.  Some definition of the enum is required to build.
+    // See 200D for a safe filtered EngDrvOut() - which probably should be more
+    // like property_whitelist, more global, with per cam config.
         const uint32_t PACK32_MODE = 0xd0008094; // plausible from rom, e.g. e0159eee on 200d 1.0.1,
+                                                 // e0228742 on 6D2 1.0.5,
                                                  // compare 5d3 1.2.3 ff57c7c8
+        enum {
+            MODE_16BIT = 0x20, // unknown, copying 14 bit for now
+            MODE_14BIT = 0x20, // probably 14-bit, it's the default value
+            MODE_12BIT = 0x10, // current guess for 12 bit - seems to grab good data every other frame...
+            MODE_10BIT =  0x0, // seems to get 10 bit, but like 12, only every other frame is good
+//            MODE_12BIT = 0x8, // possibly 15 bit?  More likely 10 but different number of planes.
+//            MODE_12BIT = 0x10, // 24 bit, two planes?  Or 12 bit, 4 plane?
+//            MODE_12BIT = 0x18, // 12 bit, 4 planes?
+//            MODE_12BIT = 0x200, // possibly 14 bpp bayer?
+//            MODE_12BIT = 0x300, // likely 8 or 16.  Alternates high and low values, could fit bayer or UYUV etc
+//            MODE_12BIT = 0x2000, // possibly 24 bit?
+        };
     #endif
-    enum {
-        MODE_16BIT = 0x130,
-        MODE_14BIT = 0x030,
-        MODE_12BIT = 0x010,
-        MODE_10BIT = 0x000,
-    };
     const uint32_t modes[] = { MODE_10BIT, MODE_12BIT, MODE_14BIT, MODE_16BIT};
 
     int bpp_index = COERCE((bpp-10)/2, 0, COUNT(modes));
