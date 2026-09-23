@@ -1133,6 +1133,11 @@ static MENU_UPDATE_FUNC(raw_main_update)
     }
 
     write_speed_update(entry, info);
+
+    /* TEMP DEBUG (remove): read real raw_info dims to fill 6D default_* thresholds.
+     * placed after write_speed_update so it overrides that warning line.
+     * 1080p/720p: no zoom (zoom=1). x5: zoom=5. Note W x H per mode. */
+    MENU_SET_WARNING(MENU_WARN_INFO, "DBG raw %dx%d fps=%d zoom=%d", raw_info.width, raw_info.height, fps_get_current_x1000()/1000, lv_dispsize);
 }
 
 static MENU_UPDATE_FUNC(aspect_ratio_update_info)
