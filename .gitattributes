@@ -1,0 +1,6 @@
+# Normalize line endings for C/C++ sources: store + check out as LF.
+# Prevents whole-file merge conflicts between CRLF and LF branches.
+*.c   text eol=lf
+*.h   text eol=lf
+*.cpp text eol=lf
+*.S   text eol=lf
