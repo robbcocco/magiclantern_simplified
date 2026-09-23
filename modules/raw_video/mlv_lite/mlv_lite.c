@@ -4741,13 +4741,13 @@ static unsigned int raw_rec_init()
         aewbSuspend = (void *) 0xFF24C5E4;
         CartridgeCancel = (void *) 0xFFCEFFDC;
         more_hacks_are_supported = 1;
-        
-        /* fixme: these are dummy values from 5D3 */
-        default_width_1080p = 2080;
-        default_height_1080p = 2080;
-        default_width_x5 = 3744;
-        default_height_x5 = 1380;
-        default_height_720p = 728;
+
+        /* measured on 6D.116 (raw_info dims per mode) */
+        default_width_1080p = 1920;
+        default_height_1080p = 1251;
+        default_width_x5 = 2768;
+        default_height_x5 = 987;
+        default_height_720p = 662;
     }
 
     if (is_camera("700D", "1.1.5"))
